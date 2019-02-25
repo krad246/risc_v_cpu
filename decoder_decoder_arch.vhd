@@ -33,6 +33,9 @@ begin
     func3 := instruction(14 downto 12);
     func7 := instruction(31 downto 25);
     
+    -- set immediate to zero to eliminate flip flops
+    imm <= x"00000000";
+    
     -- consider all possible instruction types
     case opfield is
   
@@ -44,8 +47,8 @@ begin
         rd_used <= '1';
   
         -- set register number
-        rs1 <= "00000";
-        rs2 <= "00000";
+        rs1 <= instruction(19 downto 15);
+        rs2 <= instruction(24 downto 20);
         rd <= instruction(11 downto 7);
   
         -- set immediate
@@ -63,8 +66,8 @@ begin
         rd_used <= '1';
   
         -- set register number
-        rs1 <= "00000";
-        rs2 <= "00000";
+        rs1 <= instruction(19 downto 15);
+        rs2 <= instruction(24 downto 20);
         rd <= instruction(11 downto 7);
   
         -- set immediate
@@ -82,8 +85,8 @@ begin
         rd_used <= '1';
   
         -- set register number
-        rs1 <= "00000";
-        rs2 <= "00000";
+        rs1 <= instruction(19 downto 15);
+        rs2 <= instruction(24 downto 20);
         rd <= instruction(11 downto 7);
   
         -- set immediate
@@ -103,7 +106,7 @@ begin
   
         -- set register numbers
         rs1 <= instruction(19 downto 15);
-        rs2 <= "00000";
+        rs2 <= instruction(24 downto 20);
         rd <= instruction(11 downto 7);
   
         -- grab the immediate at the end
@@ -114,6 +117,16 @@ begin
           opcode <= jalr;
         else
           opcode <= bad;
+          
+          imm <= x"00000000";
+          
+          rs1_used <= '0';
+          rs2_used <= '0';
+          rd_used <= '0';
+          
+          rs1 <= "00000";
+          rs2 <= "00000";
+          rd <= "00000";
         end if;
   
       -- when instruction is a branch
@@ -126,7 +139,7 @@ begin
         -- set the register numbers
         rs1 <= instruction(19 downto 15);
         rs2 <= instruction(24 downto 20);
-        rd <= "00000";
+        rd <= instruction(11 downto 7);
   
         -- set immediate
         imm(12 downto 1) <= instruction(31) & instruction(7) & instruction(30 downto 25) & instruction(11 downto 8);
@@ -141,7 +154,18 @@ begin
           when rv32i_fn3_branch_ge => opcode <= bge;
           when rv32i_fn3_branch_ltu => opcode <= bltu;
           when rv32i_fn3_branch_geu => opcode <= bgeu;
-          when others => opcode <= bad;
+          when others => 
+            opcode <= bad;
+          
+            imm <= x"00000000";
+            
+            rs1_used <= '0';
+            rs2_used <= '0';
+            rd_used <= '0';
+            
+            rs1 <= "00000";
+            rs2 <= "00000";
+            rd <= "00000";
         end case;
   
       -- when instruction is a load type
@@ -153,21 +177,36 @@ begin
   
         -- set register numbers
         rs1 <= instruction(19 downto 15);
-        rs2 <= "00000";
+        rs2 <= instruction(24 downto 20);
         rd <= instruction(11 downto 7);
   
         -- grab the immediate at the end
         imm(11 downto 0) <= instruction(31 downto 20);
-        imm(31 downto 12) <= (others => '0');
+        imm(31 downto 12) <= (others => instruction(31));
   
         -- set opcode based on func3
         case func3 is
           when rv32i_fn3_load_b => opcode <= lb;
           when rv32i_fn3_load_h => opcode <= lh;
           when rv32i_fn3_load_w => opcode <= lw;
-          when rv32i_fn3_load_bu => opcode <= lbu;
-          when rv32i_fn3_load_hu => opcode <= lhu;
-          when others => opcode <= bad;
+          when rv32i_fn3_load_bu => 
+            opcode <= lbu;
+            imm(31 downto 12) <= (others => '0');
+          when rv32i_fn3_load_hu => 
+            opcode <= lhu;
+            imm(31 downto 12) <= (others => '0');
+          when others => 
+            opcode <= bad;
+          
+            imm <= x"00000000";
+            
+            rs1_used <= '0';
+            rs2_used <= '0';
+            rd_used <= '0';
+            
+            rs1 <= "00000";
+            rs2 <= "00000";
+            rd <= "00000";
         end case;
   
       -- when instruction is a store type
@@ -180,18 +219,29 @@ begin
         -- set register numbers
         rs1 <= instruction(19 downto 15);
         rs2 <= instruction(24 downto 20);
-        rd <= "00000";
+        rd <= instruction(11 downto 7);
   
         -- set immediate output
         imm(11 downto 0) <= instruction(31 downto 25) & instruction(11 downto 7);
-        imm(31 downto 12) <= (others => '0');
+        imm(31 downto 12) <= (others => instruction(31));
   
         -- set opcode based on func3
         case func3 is
           when rv32i_fn3_store_b => opcode <= sb;
           when rv32i_fn3_store_h => opcode <= sh;
           when rv32i_fn3_store_w => opcode <= sw;
-          when others => opcode <= bad;
+          when others => 
+            opcode <= bad;
+          
+            imm <= x"00000000";
+            
+            rs1_used <= '0';
+            rs2_used <= '0';
+            rd_used <= '0';
+            
+            rs1 <= "00000";
+            rs2 <= "00000";
+            rd <= "00000";
         end case;
   
       -- if the instruction is an ALU immediate type
@@ -203,12 +253,12 @@ begin
         
         -- set register numbers
         rs1 <= instruction(19 downto 15);
-        rs2 <= "00000";
+        rs2 <= instruction(24 downto 20);
         rd <= instruction(11 downto 7);
   
         -- grab the immediate at the end
         imm(11 downto 0) <= instruction(31 downto 20);
-        imm(31 downto 12) <= (others => '0');
+        imm(31 downto 12) <= (others => instruction(31));
   
         -- check which function specifically and assign opcode
         case func3 is 
@@ -220,16 +270,27 @@ begin
           when rv32i_fn3_alu_and => opcode <= andi;
           when rv32i_fn3_alu_sll => 
             opcode <= slli;
-            imm(11 downto 5) <= (others => '0');
+            imm(11 downto 5) <= (others => instruction(31));
           when rv32i_fn3_alu_srl => 
             if func7 = rv32i_fn7_alu_sra then
               opcode <= srai;
-              imm(11 downto 5) <= (others => '0');
+              imm(11 downto 5) <= (others => instruction(31));
             else  
               opcode <= srli;
-              imm(11 downto 5) <= (others => '0');
+              imm(11 downto 5) <= (others => instruction(31));
             end if;
-          when others => opcode <= bad;
+          when others =>
+            opcode <= bad;
+          
+            imm <= x"00000000";
+            
+            rs1_used <= '0';
+            rs2_used <= '0';
+            rd_used <= '0';
+            
+            rs1 <= "00000";
+            rs2 <= "00000";
+            rd <= "00000";
         end case;
   
         -- if the instruction is an ALU register type
@@ -263,7 +324,18 @@ begin
               when rv32i_fn3_alu_and => opcode <= andr;
               when rv32i_fn3_alu_srl => opcode <= srlr;
               when rv32i_fn3_alu_sll => opcode <= sllr;
-              when others => opcode <= bad;
+              when others => 
+                opcode <= bad;
+          
+                imm <= x"00000000";
+                
+                rs1_used <= '0';
+                rs2_used <= '0';
+                rd_used <= '0';
+                
+                rs1 <= "00000";
+                rs2 <= "00000";
+                rd <= "00000";
             end case;
   
           -- if func7 has a 1
@@ -275,14 +347,60 @@ begin
               opcode <= subr;
             else
               opcode <= bad;
+          
+              imm <= x"00000000";
+              
+              rs1_used <= '0';
+              rs2_used <= '0';
+              rd_used <= '0';
+              
+              rs1 <= "00000";
+              rs2 <= "00000";
+              rd <= "00000";
             end if;
 
           -- all others are edge cases
-          when others => opcode <= bad;
+          when others => 
+            opcode <= bad;
+          
+            imm <= x"00000000";
+            
+            rs1_used <= '0';
+            rs2_used <= '0';
+            rd_used <= '0';
+            
+            rs1 <= "00000";
+            rs2 <= "00000";
+            rd <= "00000";
         end case;
       
         -- handle edge cases
-      when others => opcode <= bad;
+      when others => 
+        opcode <= bad;
+        
+        imm <= x"00000000";
+        
+        rs1_used <= '0';
+        rs2_used <= '0';
+        rd_used <= '0';
+        
+        rs1 <= "00000";
+        rs2 <= "00000";
+        rd <= "00000";
     end case;
+    
+    if instruction(1 downto 0) /= "11" then
+      opcode <= bad;
+        
+      imm <= x"00000000";
+      
+      rs1_used <= '0';
+      rs2_used <= '0';
+      rd_used <= '0';
+      
+      rs1 <= "00000";
+      rs2 <= "00000";
+      rd <= "00000";
+    end if;
   end process;
 end architecture decoder_arch;
