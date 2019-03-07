@@ -49,7 +49,6 @@ package body rv32i is
       when "srar-" => ret := srar;
       when "orr--" => ret := orr;
       when "andr-" => ret := andr;
-      when "nop--" => ret := nop;
       when others => ret := bad;
     end case;
   return ret;

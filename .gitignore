@@ -1,0 +1,6 @@
+# Exclude .vhd.bak files
+*
+!*/
+!*.*
+*.bak
+work

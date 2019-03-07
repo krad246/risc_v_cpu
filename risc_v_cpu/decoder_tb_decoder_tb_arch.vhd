@@ -135,14 +135,13 @@ begin
     checker : process(clk)
     begin
         if (falling_edge(clk)) then
-            -- check that the opcode outputs are correct
-            assert out_opcode = exp_opcode
+                        assert out_opcode = exp_opcode
                 report "incorrect output for test case " & to_string(test_no) & lf
                 & "(line no: " & to_string(test_no + 1) & ")" & lf
-                & "opcode was incorrect" 
+                & "opcode: " & to_string(out_opcode) & lf
+                & "expected: " & to_string(exp_opcode) 
                 severity warning;
-              
-            -- check that the register pointers are correct
+
             assert out_rs1 = exp_rs1
                 report "incorrect output for test case " & to_string(test_no) & lf
                 & "(line no: " & to_string(test_no + 1) & ")" & lf
@@ -163,8 +162,7 @@ begin
                 & "rd " & to_string(out_rd) & lf
                 & "expected: " & to_string(exp_rd) 
                 severity warning;
-            
-            -- check that the register valid bits are correct
+
             assert out_rs1_used = exp_rs1_used
                 report "incorrect output for test case " & to_string(test_no) & lf
                 & "(line no: " & to_string(test_no + 1) & ")" & lf
@@ -185,8 +183,7 @@ begin
                 & "rd_used " & to_string(out_rd_used) & lf
                 & "expected: " & to_string(exp_rd_used) 
                 severity warning;
-            
-            -- check that the immediate output is correct
+
             assert out_imm = exp_imm
                 report "incorrect output for test case " & to_string(test_no) & lf
                 & "(line no: " & to_string(test_no + 1) & ")" & lf
