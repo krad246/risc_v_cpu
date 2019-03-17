@@ -69,9 +69,7 @@ begin
         opcode <= cu_opcode;
 
         -- populate the operands based on the opcode
-        -- generally op2 is always the immediate
-        -- if possible, op0 = rs1 and op1 = rs2
-        -- set operands in ascending order
+        -- generally op0 and op1 will be filled with stuff for the ALU
         case cu_opcode is
             
             -- when r-type instruction
@@ -85,39 +83,39 @@ begin
             when slli | srli | srai =>
                 -- set immediate and op0 = rs1
                 op0 <= rs1_data;
-                op1 <= zero;
-                op2 <= cu_imm; 
+                op1 <= cu_imm;
+                op2 <= zero; 
 
             -- when i-type
             when addi | slti | sltiu | xori | ori | andi | jalr =>
                 -- set op0 = rs1
                 op0 <= rs1_data;
                 
-                -- if opcode = jalr then set op1 = pc + 4
+                -- set immediate
+                op1 <= cu_imm; 
+                
+                -- if opcode = jalr then set op2 = pc + 4
                 if cu_opcode = jalr then
                   pc_offset := unsigned(pc_val) + 4;
-                  op1 <= std_ulogic_vector(pc_offset);
+                  op2 <= std_ulogic_vector(pc_offset);
                 else
-                  op1 <= zero;
+                  op2 <= zero;
                 end if;
-                
-                -- set immediate
-                op2 <= cu_imm; 
             
             -- when ls-type
             when lb | lh | lw | lbu | lhu | sb | sh | sw =>
                 -- set op0 = rs1
                 op0 <= rs1_data;
                 
-                -- if store type then op1 = rs2
-                if cu_opcode = sb or cu_opcode = sh or cu_opcode = sw then
-                  op1 <= rs2_data;
-                else
-                  op1 <= zero;
-                end if;
-                
                 -- set immediate
-                op2 <= cu_imm;
+                op1 <= cu_imm;
+                
+                -- if store type then op2 = rs2
+                if cu_opcode = sb or cu_opcode = sh or cu_opcode = sw then
+                  op2 <= rs2_data;
+                else
+                  op2 <= zero;
+                end if;
             
             -- when b-type
             when beq | bne | blt | bge | bltu | bgeu =>
@@ -139,19 +137,20 @@ begin
                   op0 <= pc_val;
                 end if;
                 
-                -- op1 = 0, op2 = imm0
-                op1 <= zero;
-                op2 <= cu_imm;
+                -- op2 = 0, op1 = imm0
+                op1 <= cu_imm;
+                op2 <= zero;
 
             -- when j-type
             when jal =>
-                -- set op0, op1 = pc, pc + 4
+                -- set op0, op2 = pc, pc + 4
                 op0 <= pc_val;
+                
                 pc_offset := unsigned(pc_val) + 4;
-                op1 <= std_ulogic_vector(pc_offset);
+                op2 <= std_ulogic_vector(pc_offset);
 
-                -- set op2 = imm
-                op2 <= cu_imm;
+                -- set op1 = imm
+                op1 <= cu_imm;
             
             -- edge cases
             when nop | bad =>

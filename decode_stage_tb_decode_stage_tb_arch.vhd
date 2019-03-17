@@ -20,10 +20,14 @@ architecture decode_stage_tb_arch of decode_stage_tb is
     signal clk : std_ulogic;
     
     -- expected output signals
+    signal exp_opcode : rv32i_op;
     signal exp_op0, exp_op1, exp_op2 : std_ulogic_vector(31 downto 0);
+    signal exp_rs1, exp_rs2, exp_rd : std_ulogic_vector(4 downto 0);
 
     -- output signals from the decode stage
+    signal out_opcode : rv32i_op;
     signal out_op0, out_op1, out_op2 : std_ulogic_vector(31 downto 0);
+    signal out_rs1, out_rs2, out_rd : std_ulogic_vector(4 downto 0);
 
     -- test case number
     signal test_no : natural := 1;
@@ -38,7 +42,11 @@ begin
             clock => clk,
             op0 => out_op0,
             op1 => out_op1,
-            op2 => out_op2);
+            op2 => out_op2,
+            rs1 => out_rs1,
+            rs2 => out_rs2,
+            rd => out_rd,
+            opcode => out_opcode);
 
     -- create a stimulus process that reads the test cases
     stimuli : process
@@ -54,6 +62,7 @@ begin
 
         -- test case binary for all test outputs
         variable tc_op0, tc_op1, tc_op2 : std_ulogic_vector(31 downto 0);
+        variable tc_rs1, tc_rs2, tc_rd : std_ulogic_vector(4 downto 0);
         
     begin
         -- start fresh
@@ -73,6 +82,7 @@ begin
             -- set it as expected value
             read(fp, opcode_mnem);
             tc_opcode := ftype(opcode_mnem);
+            exp_opcode <= tc_opcode;
 
             -- read the test case instruction and place it on the input
             hread(fp, tc_instruction);
@@ -99,6 +109,16 @@ begin
 
             hread(fp, tc_op2);
             exp_op2 <= tc_op2;
+
+            -- read the test case register pointers
+            hread(fp, tc_rs1);
+            exp_rs1 <= tc_rs1;
+
+            hread(fp, tc_rs2);
+            exp_rs2 <= tc_rs2;
+
+            hread(fp, tc_rd);
+            exp_rd <= tc_rd;
             
             -- new cycle
             wait for 10 ns;
@@ -114,6 +134,10 @@ begin
     begin
         if (falling_edge(clk)) then
             -- check that each operand output is correct
+            assert out_opcode = exp_opcode
+                report "incorrect opcode output"
+                severity warning;
+            
             assert out_op0 = exp_op0
                 report "incorrect output for test case " & to_string(test_no) & lf
                 & "(line no: " & to_string(test_no + 1) & ")" & lf
@@ -134,7 +158,28 @@ begin
                 & "op2 " & to_hstring(out_op2) & lf
                 & "expected: " & to_hstring(exp_op2) 
                 severity warning;
-                
+            
+            assert out_rs1 = exp_rs1
+                report "incorrect output for test case " & to_string(test_no) & lf
+                & "(line no: " & to_string(test_no + 1) & ")" & lf
+                & "rs1: " & to_hstring(out_rs1) & lf
+                & "expected: " & to_hstring(exp_rs1) 
+                severity warning;
+
+            assert out_rs2 = exp_rs2
+                report "incorrect output for test case " & to_string(test_no) & lf
+                & "(line no: " & to_string(test_no + 1) & ")" & lf
+                & "rs2 " & to_hstring(out_rs2) & lf
+                & "expected: " & to_hstring(exp_rs2) 
+                severity warning;
+
+            assert out_rd = exp_rd
+                report "incorrect output for test case " & to_string(test_no) & lf
+                & "(line no: " & to_string(test_no + 1) & ")" & lf
+                & "rd " & to_hstring(out_rd) & lf
+                & "expected: " & to_hstring(exp_rd) 
+                severity warning;
+            
             test_no <= test_no + 1;
         end if;
     end process;
