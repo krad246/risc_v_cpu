@@ -19,18 +19,20 @@ entity execute_stage is
     rd_out : out std_ulogic_vector(4 downto 0);
     opcode : in rv32i_op;
     opcode_out : out rv32i_op;
-    addr, mem_data : out std_ulogic_vector(31 downto 0));
+    address, mem_data : out std_ulogic_vector(31 downto 0));
 end entity execute_stage;
 
 --
 architecture execute_stage_arch of execute_stage is
   signal op0_val, op1_val, op2_val : std_ulogic_vector(31 downto 0);
   signal rd_val : std_ulogic_vector(4 downto 0);
-  signal opcode_val : rv32i_op;
   
   signal alu_op0, alu_op1, alu_ret : std_ulogic_vector(31 downto 0);
   signal alu_control : alu_op;
   signal alu_zf : std_ulogic;
+  
+  signal bin_opcode : std_ulogic_vector(5 downto 0);
+  signal opcode_val : std_ulogic_vector(5 downto 0);
   
 begin
     -- register to latch op0
@@ -72,7 +74,7 @@ begin
     -- register to latch opcode
     opcode_reg : entity work.reg(pos_clk_desc)
         generic map(reg_width => 6)
-        port map(reg_in => opcode,
+        port map(reg_in => bin_opcode,
             reg_clk => clock,
             reg_en => '1',
             reg_rst => '0',
@@ -86,17 +88,28 @@ begin
           zero_flag => alu_zf,
           alu_out => alu_ret);
           
+    -- function that converts rv32i_ops to bit vectors
+    enum_vec_conv : process(opcode)
+    begin
+      bin_opcode <= std_ulogic_vector(to_unsigned(rv32i_op'pos(opcode), 6));
+    end process;
+    
+      
     -- function to convert opcode to alu control code and populate inputs accordingly
     alu_op_decomp_param_pass : process(op0_val, op1_val, op2_val, opcode_val)
+      variable opcode_v : rv32i_op;
     begin
+        -- take the bit vector and turn it into an rv32i_op
+        opcode_v := rv32i_op'val(to_integer(unsigned(opcode_val)));
+       
        -- check what the opcode is and set the control
-       case opcode_val is
+       case opcode_v is
            -- if it uses an addition
            when auipc | jal | jalr | lb | lh | lw | lbu | lhu | sb | sh | sw | addi | addr =>
              alu_control <= alu_add;
              
              alu_op0 <= op0_val;
-             if opcode_val = addr then
+             if opcode_v = addr then
                 alu_op1 <= op1_val;
              else
                 alu_op1 <= op2_val;
@@ -107,7 +120,7 @@ begin
              alu_control <= alu_sub;
             
               alu_op0 <= op0_val;
-              if opcode_val = slti then
+              if opcode_v = slti then
                 alu_op1 <= op2_val;
               else 
                 alu_op1 <= op1_val;
@@ -118,7 +131,7 @@ begin
              alu_control <= alu_subu;
              
               alu_op0 <= op0_val;
-              if opcode_val = sltiu then
+              if opcode_v = sltiu then
                 alu_op1 <= op2_val;
               else 
                 alu_op1 <= op1_val;
@@ -129,7 +142,7 @@ begin
              alu_control <= alu_xor;
              
              alu_op0 <= op0_val;
-             if opcode_val = xori then
+             if opcode_v = xori then
                alu_op1 <= op2_val;
              else
                alu_op1 <= op1_val;
@@ -140,7 +153,7 @@ begin
              alu_control <= alu_or;
             
              alu_op0 <= op0_val;
-             if opcode_val = ori then
+             if opcode_v = ori then
                alu_op1 <= op2_val;
              else
                alu_op1 <= op1_val;
@@ -150,7 +163,7 @@ begin
              alu_control <= alu_and;
              
              alu_op0 <= op0_val;
-             if opcode_val = andi then
+             if opcode_v = andi then
                alu_op1 <= op2_val;
              else
                alu_op1 <= op1_val;
@@ -160,7 +173,7 @@ begin
              alu_control <= alu_sl;
             
             alu_op0 <= op0_val;
-             if opcode_val = slli then
+             if opcode_v = slli then
                alu_op1 <= op2_val;
              else
                alu_op1 <= op1_val;
@@ -170,7 +183,7 @@ begin
              alu_control <= alu_srl;
               
               alu_op0 <= op0_val;
-             if opcode_val = srli then
+             if opcode_v = srli then
                alu_op1 <= op2_val;
              else
                alu_op1 <= op1_val;
@@ -180,7 +193,7 @@ begin
              alu_control <= alu_sra;
                        
             alu_op0 <= op0_val;
-             if opcode_val = srai then
+             if opcode_v = srai then
                alu_op1 <= op2_val;
              else
                alu_op1 <= op1_val;
