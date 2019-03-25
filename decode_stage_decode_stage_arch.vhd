@@ -48,7 +48,7 @@ begin
             reg_en => '1',
             reg_rst => '0',
             reg_out => ir_val);
-    
+
     -- register to latch the program counter
     pc_register : entity work.reg(pos_clk_desc)
         generic map(reg_width => 32)
@@ -57,66 +57,68 @@ begin
             reg_en => '1',
             reg_rst => '0',
             reg_out => pc_val);            
-    
+
     -- control unit that populates the operand fields
     -- control unit listens in on the opcode, program counter, data inputs and immediate
     control_unit : process(cu_opcode, cu_imm, pc_val, rs1_data, rs2_data)
         constant zero : std_ulogic_vector(31 downto 0) := x"00000000";
         variable pc_offset : unsigned(31 downto 0);
-        
+
     begin
         -- directly set the opcode from the combinational decoder
         opcode <= cu_opcode;
 
         -- populate the operands based on the opcode
-        -- generally op0 and op1 will be filled with stuff for the ALU
+        -- generally op2 is always the immediate
+        -- if possible, op0 = rs1 and op1 = rs2
+        -- set operands in ascending order
         case cu_opcode is
-            
+
             -- when r-type instruction
             when addr | subr | sllr | sltr | sltur | xorr | srlr | srar | orr | andr =>
                 -- set op0 = rs1 and op1 = rs2
                 op0 <= rs1_data;
                 op1 <= rs2_data;
                 op2 <= zero;
-            
+
             -- when r-type alternative
             when slli | srli | srai =>
                 -- set immediate and op0 = rs1
                 op0 <= rs1_data;
-                op1 <= cu_imm;
-                op2 <= zero; 
+                op1 <= zero;
+                op2 <= cu_imm; 
 
             -- when i-type
             when addi | slti | sltiu | xori | ori | andi | jalr =>
                 -- set op0 = rs1
                 op0 <= rs1_data;
-                
-                -- set immediate
-                op1 <= cu_imm; 
-                
-                -- if opcode = jalr then set op2 = pc + 4
+
+                -- if opcode = jalr then set op1 = pc + 4
                 if cu_opcode = jalr then
                   pc_offset := unsigned(pc_val) + 4;
-                  op2 <= std_ulogic_vector(pc_offset);
+                  op1 <= std_ulogic_vector(pc_offset);
                 else
-                  op2 <= zero;
+                  op1 <= zero;
                 end if;
-            
+
+                -- set immediate
+                op2 <= cu_imm; 
+
             -- when ls-type
             when lb | lh | lw | lbu | lhu | sb | sh | sw =>
                 -- set op0 = rs1
                 op0 <= rs1_data;
-                
-                -- set immediate
-                op1 <= cu_imm;
-                
-                -- if store type then op2 = rs2
+
+                -- if store type then op1 = rs2
                 if cu_opcode = sb or cu_opcode = sh or cu_opcode = sw then
-                  op2 <= rs2_data;
+                  op1 <= rs2_data;
                 else
-                  op2 <= zero;
+                  op1 <= zero;
                 end if;
-            
+
+                -- set immediate
+                op2 <= cu_imm;
+
             -- when b-type
             when beq | bne | blt | bge | bltu | bgeu =>
                 -- set op0, op1 = rs1, rs2
@@ -126,7 +128,7 @@ begin
                 -- set op2 = imm + pc
                 pc_offset := unsigned(pc_val) + unsigned(cu_imm);
                 op2 <= std_ulogic_vector(pc_offset);
-            
+
             -- when u-type
             when lui | auipc =>
                 -- if lui then the only operand is imm
@@ -136,22 +138,21 @@ begin
                 else
                   op0 <= pc_val;
                 end if;
-                
-                -- op2 = 0, op1 = imm0
-                op1 <= cu_imm;
-                op2 <= zero;
+
+                -- op1 = 0, op2 = imm0
+                op1 <= zero;
+                op2 <= cu_imm;
 
             -- when j-type
             when jal =>
-                -- set op0, op2 = pc, pc + 4
+                -- set op0, op1 = pc, pc + 4
                 op0 <= pc_val;
-                
                 pc_offset := unsigned(pc_val) + 4;
-                op2 <= std_ulogic_vector(pc_offset);
+                op1 <= std_ulogic_vector(pc_offset);
 
-                -- set op1 = imm
-                op1 <= cu_imm;
-            
+                -- set op2 = imm
+                op2 <= cu_imm;
+
             -- edge cases
             when nop | bad =>
                 -- all zero
@@ -160,4 +161,4 @@ begin
                 op2 <= zero;
         end case;
     end process;
-end architecture decode_stage_arch;
+end architecture decode_stage_arch; 

@@ -54,4 +54,23 @@ package body rv32i is
     end case;
   return ret;
   end;
+  
+  function alutype(func : func_name) return alu_op is
+    variable ret : alu_op;
+    
+    begin
+      case func is 
+        when "add--" => ret := alu_add;
+        when "sub--" => ret := alu_sub;
+        when "subu-" => ret := alu_subu;
+        when "xor--" => ret := alu_xor;
+        when "or---" => ret := alu_or;
+        when "and--" => ret := alu_and;
+        when "sl---" => ret := alu_sl;
+        when "srl--" => ret := alu_srl;
+        when "sra--" => ret := alu_sra;
+        when others => ret := alu_bad;
+      end case;
+      return ret;
+    end;
 end rv32i;

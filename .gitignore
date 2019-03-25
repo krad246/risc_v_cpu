@@ -5,3 +5,4 @@
 *.bak
 work
 risc_v_cpu
+*.lck

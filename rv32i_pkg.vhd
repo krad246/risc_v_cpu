@@ -85,7 +85,9 @@ package rv32i is
   function ftype(func : func_name) return rv32i_op;
   
   type alu_op is (alu_add, alu_sub, alu_and, alu_or, alu_xor, alu_sl, alu_srl, alu_sra,
-    alu_subu);
+    alu_subu, alu_bad);
   
-  attribute enum_encoding of alu_op : type is "0000 0001 0010 0011 0100 0101 0110 0111 1000";
+  attribute enum_encoding of alu_op : type is "0000 0001 0010 0011 0100 0101 0110 0111 1000 1001";
+  
+  function alutype(func : func_name) return alu_op;
 end rv32i;

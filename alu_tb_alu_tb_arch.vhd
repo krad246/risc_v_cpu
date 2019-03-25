@@ -5,15 +5,15 @@ use std.textio.all;
 
 use work.rv32i.all;
 
-ENTITY alu_tb IS
-END ENTITY alu_tb;
+entity alu_tb is
+end entity alu_tb;
 
 --
-ARCHITECTURE alu_tb_arch OF alu_tb IS
+architecture alu_tb_arch of alu_tb is
   file test_cases : text open read_mode is "alu_test_cases.txt";
   
-  signal op0, op1, op2 : std_ulogic_vector(31 downto 0);
-  signal opcode : rv32i_op;
+  signal op0, op1 : std_ulogic_vector(31 downto 0);
+  signal opcode : alu_op;
   
   signal clk : std_ulogic;
   
@@ -25,23 +25,22 @@ ARCHITECTURE alu_tb_arch OF alu_tb IS
   
   signal test_no : natural := 1;
 
-BEGIN
+begin
   alu : entity work.alu(alu_arch)
     port map(op0 => op0,
       op1 => op1,
-      op2 => op2,
       opcode => opcode,
       alu_out => alu_out,
-      status => status);
+      zero_flag => status);
       
   stimuli : process
     -- file pointer for line reads
     variable fp : line;
     
-    variable tc_op0, tc_op1, tc_op2 : std_ulogic_vector(31 downto 0);
+    variable tc_op0, tc_op1 : std_ulogic_vector(31 downto 0);
     
     variable opcode_mnem : func_name;
-    variable tc_opcode : rv32i_op;
+    variable tc_opcode : alu_op;
     
     variable tc_alu_out : std_ulogic_vector(31 downto 0);
     variable tc_status : std_ulogic;
@@ -62,7 +61,7 @@ BEGIN
             -- first read the instruction string 
             -- then convert it to binary and read into tc_opcode
             read(fp, opcode_mnem);
-            tc_opcode := ftype(opcode_mnem);
+            tc_opcode := alutype(opcode_mnem);
             opcode <= tc_opcode;
 
             -- read the test case operands and place it on the input
@@ -71,9 +70,6 @@ BEGIN
             
             hread(fp, tc_op1);
             op1 <= tc_op1;
-            
-            hread(fp, tc_op2);
-            op2 <= tc_op2;
             
             -- read the test case outputs
             hread(fp, tc_alu_out);
@@ -102,14 +98,16 @@ BEGIN
             & "expected: " & to_hstring(exp_alu_out) 
             severity warning;
             
-          assert exp_status = alu_status
+          assert exp_status = status
             report "incorrect output for test case " & to_string(test_no) & lf
             & "(line no: " & to_string(test_no + 1) & ")" & lf
             & "status: " & to_string(status) & lf
             & "expected: " & to_string(exp_status)
             severity warning;
+          
+          test_no <= test_no + 1;
       end if;
   end process;
 
-END ARCHITECTURE alu_tb_arch;
+end architecture alu_tb_arch;
 
