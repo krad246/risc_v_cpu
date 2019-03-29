@@ -126,7 +126,7 @@ begin
                 op1 <= rs2_data;
 
                 -- set op2 = imm + pc
-                pc_offset := unsigned(pc_val) + unsigned(cu_imm);
+                pc_offset := unsigned(pc_val) + to_integer(signed(cu_imm));
                 op2 <= std_ulogic_vector(pc_offset);
 
             -- when u-type
