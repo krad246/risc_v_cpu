@@ -33,7 +33,7 @@ begin
     else
       addr_out <= fetch_addr;
       fetch_delay <= delay_in;
-      mem_delay <= '0';
+      mem_delay <= delay_in;
       write_out <= '0';
       read_out <= fetch_read;
     end if;

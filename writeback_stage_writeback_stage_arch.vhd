@@ -64,7 +64,7 @@ begin
 	  
 	  -- if the opcode is a branch or a store, we aren't writing to a register
 	  case op_val is
-	  when beq | bne | blt | bge | bltu | bgeu | sb | sh | sw => 
+	  when beq | bne | blt | bge | bltu | bgeu | sb | sh | sw | nop | bad => 
 	   write <= '0';
 	   rd_out <= zero(4 downto 0);
 	   data_out <= zero;

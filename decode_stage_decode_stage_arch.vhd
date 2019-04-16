@@ -10,7 +10,7 @@ entity decode_stage is
     -- op0, op1, op2 are the operands from the instruction
     -- opcode is the function to execute
     port(instruction, pc, rs1_data, rs2_data : in std_ulogic_vector(31 downto 0);
-        clock : in std_ulogic;
+        clock, stall : in std_ulogic;
         rs1, rs2, rd : out std_ulogic_vector(4 downto 0);
         rs1_used, rs2_used, rd_used : out std_ulogic;
         op0, op1, op2 : out std_ulogic_vector(31 downto 0);
@@ -45,7 +45,7 @@ begin
         generic map(reg_width => 32)
         port map(reg_in => instruction,
             reg_clk => clock,
-            reg_en => '1',
+            reg_en => not stall,
             reg_rst => '0',
             reg_out => ir_val);
 
@@ -54,7 +54,7 @@ begin
         generic map(reg_width => 32)
         port map(reg_in => pc,
             reg_clk => clock,
-            reg_en => '1',
+            reg_en => not stall,
             reg_rst => '0',
             reg_out => pc_val);            
 

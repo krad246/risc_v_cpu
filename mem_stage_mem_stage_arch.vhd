@@ -40,7 +40,7 @@ begin
 	generic map(reg_width => 32)
 		port map(reg_in => data_in,
 		reg_clk => clock,
-		reg_en => '1',
+		reg_en => not delay,
 		reg_rst => '0',
 		reg_out => data_val);
   
@@ -49,7 +49,7 @@ begin
 	generic map(reg_width => 32)
 		port map(reg_in => addr_in,
 		reg_clk => clock,
-		reg_en => '1',
+		reg_en => not delay,
 		reg_rst => '0',
 		reg_out => addr_val);
   
@@ -58,7 +58,7 @@ begin
 	generic map(reg_width => 5)
 		port map(reg_in => rd_in,
 		reg_clk => clock,
-		reg_en => '1',
+		reg_en => not delay,
 		reg_rst => '0',
 		reg_out => rd_val);
 
