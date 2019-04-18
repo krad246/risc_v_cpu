@@ -38,13 +38,22 @@ architecture processor_arch of processor is
   signal f_read : std_ulogic;
   
   -- regfile <-> decode interaction signals
-  signal rf2d_rs1_data, rf2d_rs2_data : std_ulogic_vector(4 downto 0);
+  signal rf2d_rs1_data, rf2d_rs2_data : std_ulogic_vector(31 downto 0);
   
   -- regtracker <-> decode interaction
   signal rt2d_stall : std_ulogic;
   signal d2rt_reada, d2rt_readb, d2rt_rfwa: std_ulogic;
   signal d2rt_rfraa, d2rt_rfrab, d2rt_rfwadecd : std_ulogic_vector(4 downto 0);
   
+  -- arbiter <-> memory stage interaction
+  signal mem2arb_addr, mem2arb_writedata, arb2mem_readdata : std_ulogic_vector(31 downto 0);
+  signal mem2arb_re, mem2arb_we : std_ulogic;
+  signal arb2mem_delay : std_ulogic;
+  
+  -- arbiter <-> ram interaction
+  signal arb2ram_addr, arb2ram_data : std_ulogic_vector(31 downto 0);
+  signal arb2ram_we, arb2ram_re : std_ulogic;
+  signal ram2arb_delay : std_ulogic;
   
   -- decode outputs
   signal d_rs1, d_rs2, d_rd : std_ulogic_vector(4 downto 0);
@@ -52,14 +61,35 @@ architecture processor_arch of processor is
   signal d_op0, d_op1, d_op2 : std_ulogic_vector(31 downto 0);
   signal d_opcode : rv32i_op;
   
-  -- deco
+  -- execute outputs
+  signal d2e_rd : std_ulogic_vector(4 downto 0);
+  signal e_addr, e_data : std_ulogic_vector(31 downto 0);
+  signal e_rd : std_ulogic_vector(4 downto 0);
+  signal e_opc : rv32i_op;
+  
+  -- memory stage outputs
+  signal m_wbdata : std_ulogic_vector(31 downto 0);
+  signal m_rd : std_ulogic_vector(4 downto 0);
+  signal m_opc : rv32i_op;
+  signal m_stall : std_ulogic;
+  
+  -- writeback outputs
+  signal wb_write : std_ulogic;
+  signal wb_writedata : std_ulogic_vector(31 downto 0);
+  signal wb_rd : std_ulogic_vector(4 downto 0);
+  
+  -- arbiter outputs
+  signal arb_data : std_ulogic_vector(31 downto 0);
+  
+  -- ram output
+  signal ram_data : std_ulogic_vector(31 downto 0);
   
 begin
   fetch : entity work.instruction_fetch(if_arch)
     port map(
       
       -- arbiter <-> fetch interactions  
-      if_delay_flag => arb2f_fetchdelay,
+      if_delay_flag => arb2f_fetchdelay or m_stall or rt2d_stall,
       if_mem_data => arb2f_instdata, 
       if_addr_out => f_pc,
       if_read_out => f_read,
@@ -95,8 +125,8 @@ begin
       -- clock
       clock => clock,
       
-      -- stall from register tracker
-      stall => rt2d_stall,
+      -- stall from register tracker or memory stage
+      stall => rt2d_stall or m_stall,
       
       -- rs1 and rs2 contents from register file
       rs1_data => rf2d_rs1_data,
@@ -107,9 +137,6 @@ begin
       rs2 => d_rs2,
       rd => d_rd,
       
-      --
-      -- rd => ,
-      
       -- register valid bits to tracker and execute
       rs1_used => d_rs1v,
       rs2_used => d_rs2v,
@@ -118,47 +145,176 @@ begin
       op0 => d_op0,
       op1 => d_op1,
       op2 => d_op2,
-      opcode => d_opcode
-      
+      opcode => d_opcode  
     );
     
+    -- register tracker register reservations come from decode stage valid bits
     d2rt_reada <= d_rs1v;
     d2rt_readb <= d_rs2v;
     d2rt_rfwa <= d_rdv;
     
+    -- register tracker register addresses come from decode stage addresses
     d2rt_rfraa <= d_rs1;
     d2rt_rfrab <= d_rs2;
     d2rt_rfwadecd <= d_rd;
       
   execute : entity work.execute_stage(execute_stage_arch)
-    port map();
+    port map(
       
-  memory : entity work.mem_stage(mem_stage_arch)
-    port map();
+      -- input operands of execute come from decode
+      op0 => d_op0, 
+      op1 => d_op1, 
+      op2 => d_op2,
+      
+      -- clock
+		  clock => clock,
+		  
+		  -- decode stage rd goes to execute stage
+		  rd_in => d2e_rd,
+		  
+		  -- execute stage rd output for mem
+		  rd_out => e_rd,
+		  
+		  -- input opcode comes from decode stage
+		  opcode => d_opcode,
+		  
+		  -- execute stage opcode output from execute stage
+		  opcode_out => e_opc,
+		  
+		  -- address, data output from execute stage goes to memeory
+		  address => e_addr,
+		  data => e_data, 
+		  
+		  -- execute stage jmp and jaddr go to fetch
+		  jmp_addr => ex2f_jmp_addr,
+		  jmp => ex2f_jmp,
+		  
+		  -- mem stage freezes execute
+		  stall => m_stall
+		);
+	
+	-- execute stage gets rd from decode
+	d2e_rd <= d_rd;
       
   writeback : entity work.writeback_stage(writeback_stage_arch)
-    port map();
-  
-  ram : entity work.MemorySystem(Behavior)
-    port map();
+    port map(
       
+      -- take the inputs from memory
+      data_in => m_wbdata,
+      rd_in => m_rd,
+      op_in => m_opc,
+      
+      -- writeback data, enable, and register address goes to register file
+      data_out => wb_writedata,
+      rd_out => wb_rd,
+      write => wb_write,
+      
+      -- clock
+      clock => clock
+    );
+      
+    memory : entity work.mem_stage(mem_stage_arch)
+    port map(
+      
+      -- mem stage inputs come from execute stage
+      data_in => e_data, 
+      addr_in => e_addr,
+      rd_in => e_rd,
+      op_in => e_opc,
+      
+      -- addr, write and read data interface with memory system
+      -- plus enable bits
+      addr_out => mem2arb_addr, 
+      write_data => mem2arb_writedata,
+      read_data => arb2mem_readdata,
+      read => mem2arb_re, 
+      write => mem2arb_we,
+      
+      -- m_type : out std_ulogic_vector(1 downto 0);
+
+      -- delay comes from arbiter
+      delay => arb2mem_delay,
+
+      -- stall output freezes all stages before
+      stall => m_stall,
+
+      -- mem stage outputs go to writeback
+      data_out => m_wbdata,
+      rd_out => m_rd,
+      op_out => m_opc,
+      
+      -- clock
+      clock => clock
+    );    
+   
+  ram : entity work.MemorySystem(Behavior)
+  port map(Addr => arb2ram_addr, DataIn => arb2ram_data,
+      clock => clock, we => arb2ram_we, re => arb2ram_re,
+      mdelay => ram2arb_delay,
+      DataOut => ram_data);
+  
   arbiter : entity work.arbiter(arbiter_arch)
-    port map();
+    port map(
+      fetch_addr => f2arb_fetchaddr, 
+      mem_addr => mem2arb_addr, 
+      data_in => (mem2arb_writedata and mem2arb_we) or ((not mem2arb_we) and ram_data),
+      fetch_read => f2arb_read,
+      mem_read => mem2arb_re, 
+      write_in => mem2arb_we, 
+      delay_in => ram2arb_delay,
+      data_out => arb_data,
+      addr_out => arb2ram_addr,
+      fetch_delay => arb2f_fetchdelay,
+      mem_delay => arb2mem_delay,
+      write_out => arb2ram_we, 
+      read_out => arb2ram_re
+    ); 
+  
+  arb2f_instdata <= arb_data;
+  arb2mem_readdata <= arb_data;
+  arb2ram_data <= arb_data;
   
   regfile : entity work.regfile(regfile_arch)
-    port map();
+    port map(
+      -- register file write data comes from writeback
+      data_in => wb_writedata,
+      
+      -- register file reg addresses come from decode stage
+      read_addr_1 => d_rs1, 
+      read_addr_2 => d_rs2,
+      write_addr => wb_rd,
+      
+      -- writeback write output enables write for register
+      write => wb_write,
+      
+      -- clock
+      clock => clock,
+      
+      -- register contents go to decode
+      read_data_1 => rf2d_rs1_data,
+      read_data_2 => rf2d_rs2_data
+    );
   
-  regtracker : entity regtracker(regtracker_arch)
-    port map(stall => rt2d_stall,
+  track : entity work.regtracker(regtracker_arch)
+    port map(
+      -- stall comes to decode stage
+      stall => rt2d_stall,
+      
+      -- register addresses come from decode stage + valid bits
       rfra_a => d2rt_rfraa,
       rfra_b => d2rt_rfrab,
       rfwa_decd => d2rt_rfwadecd,
       read_a => d2rt_reada,
       read_b => d2rt_readb,
       reserve => d2rt_rfwa,
-      clock => clock
-     -- free =>
-      );  
+      
+      -- clock
+      clock => clock,
+      
+      -- write signal from writeback frees register
+      rfwa_wb => wb_rd,
+      free => wb_write
+    );  
 
 end architecture processor_arch;
 

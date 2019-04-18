@@ -65,6 +65,5 @@ begin
         enable => reg_r_select_2(i),
         data_out => read_data_2);     
   end generate registers;
-      
 end architecture regfile_arch;
 

@@ -35,7 +35,7 @@ begin
     end if;
   end process;
   
-  check_stall : process(reserve_state, rfra_a, rfra_b, read_a, read_b)
+  check_stall : process(reserve_state, rfra_a, rfra_b, read_a, read_b, rfwa_decd, reserve)
   begin
     stall <= '0';
     
@@ -44,6 +44,10 @@ begin
     end if;
     
     if reserve_state(to_integer(unsigned(rfra_b))) and read_b  then
+      stall <= '1';
+    end if;
+    
+    if reserve_state(to_integer(unsigned(rfwa_decd))) and reserve then
       stall <= '1';
     end if;
   end process;

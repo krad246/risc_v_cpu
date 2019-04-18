@@ -11,7 +11,8 @@ entity execute_stage is
 		opcode : in rv32i_op;
 		opcode_out : out rv32i_op;
 		address, data, jmp_addr : out std_ulogic_vector(31 downto 0);
-		jmp : out std_ulogic);
+		jmp : out std_ulogic; 
+		stall : in std_ulogic);
 end entity execute_stage;
 
 --
@@ -31,7 +32,7 @@ begin
 	generic map(reg_width => 32)
 		port map(reg_in => op0,
 			reg_clk => clock,
-			reg_en => '1',
+			reg_en => not stall,
 			reg_rst => '0',
 			reg_out => op0_val);
 
@@ -40,7 +41,7 @@ begin
 	generic map(reg_width => 32)
 		port map(reg_in => op1,
 			reg_clk => clock,
-			reg_en => '1',
+			reg_en => not stall,
 			reg_rst => '0',
 			reg_out => op1_val);
 
@@ -49,7 +50,7 @@ begin
 	generic map(reg_width => 32)
 		port map(reg_in => op2,
 			reg_clk => clock,
-			reg_en => '1',
+			reg_en => not stall,
 			reg_rst => '0',
 			reg_out => op2_val);
 
@@ -58,7 +59,7 @@ begin
 	generic map(reg_width => 5)
 		port map(reg_in => rd_in,
 		reg_clk => clock,
-		reg_en => '1',
+		reg_en => not stall,
 		reg_rst => '0',
 		reg_out => rd_val);
 
@@ -67,7 +68,7 @@ begin
 		port map(reg_in => opcode,
 			reg_out => opcode_val,
 			clock => clock,
-			en => '1',
+			en => not stall,
 			rst => '0');
 
 	-- alu object to do math
