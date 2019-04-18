@@ -74,11 +74,12 @@ begin
     
   begin
     if (rising_edge(if_clk)) then
-        if (if_rst or if_jmp_flag) then
-          pc_address := unsigned(pc_reset_val);
-        else if (not if_delay_flag) then
-          pc_address := pc_address + 4;
-        end if;
+      if (if_rst) then
+        pc_address := unsigned(nullptr);
+       elsif (if_jmp_flag) then
+        pc_address := unsigned(if_jmp_addr);
+      elsif (not if_delay_flag) then
+        pc_address := unsigned(pc_address) + 4;
       end if;
     end if;
     

@@ -26,6 +26,9 @@ architecture decode_stage_arch of decode_stage is
     -- signal for opcode and immediate from combinational decoder
     signal cu_imm : std_ulogic_vector(31 downto 0);
     signal cu_opcode : rv32i_op;
+    
+    -- decoder registration
+    signal rdv : std_ulogic;
 
 begin
     -- combinational decoder 
@@ -36,9 +39,11 @@ begin
             rd => rd,
             rs1_used => rs1_used,
             rs2_used => rs2_used,
-            rd_used => rd_used,
+            rd_used => rdv,
             opcode => cu_opcode,
             imm => cu_imm);
+            
+    rd_used <= rdv and not stall;
 
     -- register to latch the instruction
     inst_register : entity work.reg(pos_clk_desc)
@@ -60,13 +65,17 @@ begin
 
     -- control unit that populates the operand fields
     -- control unit listens in on the opcode, program counter, data inputs and immediate
-    control_unit : process(cu_opcode, cu_imm, pc_val, rs1_data, rs2_data)
+    control_unit : process(cu_opcode, cu_imm, pc_val, rs1_data, rs2_data, stall)
         constant zero : std_ulogic_vector(31 downto 0) := x"00000000";
         variable pc_offset : unsigned(31 downto 0);
 
     begin
-        -- directly set the opcode from the combinational decoder
-        opcode <= cu_opcode;
+        -- directly set the opcode from the combinational decoder unless a stall has occurred
+        if not stall then
+          opcode <= cu_opcode;
+        else
+          opcode <= nop;
+        end if;
 
         -- populate the operands based on the opcode
         -- generally op2 is always the immediate

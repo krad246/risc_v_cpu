@@ -13,16 +13,16 @@ use ieee.numeric_std.all;
 use work.rv32i.all;
 
 entity arbiter is
-  port(fetch_addr, mem_addr, data_in : in std_ulogic_vector(31 downto 0);
+  port(fetch_addr, mem_addr, data_in_mem, data_in_ram : in std_ulogic_vector(31 downto 0);
     fetch_read, mem_read, write_in, delay_in : in std_ulogic;
-    data_out, addr_out : out std_ulogic_vector(31 downto 0);
+    data_out_mem, data_out_ram, addr_out : out std_ulogic_vector(31 downto 0);
     fetch_delay, mem_delay, write_out, read_out : out std_ulogic);
 end entity arbiter;
 
 --
 architecture arbiter_arch of arbiter is
 begin
-  arbiter : process(fetch_addr, mem_addr, fetch_read, mem_read, write_in, delay_in)
+  arbiter : process(fetch_addr, mem_addr, fetch_read, mem_read, write_in, delay_in, data_in_mem, data_in_ram)
   begin
     if (mem_read or write_in) then
       addr_out <= mem_addr;
@@ -37,8 +37,9 @@ begin
       write_out <= '0';
       read_out <= fetch_read;
     end if;
+    
+  data_out_mem <= data_in_mem;
+  data_out_ram <= data_in_ram;
   end process;
-  
-  data_out <= data_in;
 end architecture arbiter_arch;
 

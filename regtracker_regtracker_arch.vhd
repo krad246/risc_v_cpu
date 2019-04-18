@@ -14,15 +14,16 @@ use ieee.numeric_std.all;
 entity regtracker is
   port(rfra_a, rfra_b, rfwa_decd, rfwa_wb : in std_ulogic_vector(4 downto 0);
     reserve, read_a, read_b, free, clock : in std_ulogic;
+    resvec : out std_ulogic_vector(31 downto 0);
     stall : out std_ulogic);
 end entity regtracker;
 
 --
 architecture regtracker_arch of regtracker is
-  signal reserve_state : std_ulogic_vector(31 downto 0);
+  signal reserve_state : std_ulogic_vector(31 downto 0) := x"00000000";
   
 begin
-  update_tracker : process(clock)
+  update_tracker : process(clock, rfwa_decd, rfwa_wb, reserve, free)
   begin    
     if rising_edge(clock) then
       if reserve then
@@ -36,6 +37,7 @@ begin
   end process;
   
   check_stall : process(reserve_state, rfra_a, rfra_b, read_a, read_b, rfwa_decd, reserve)
+    variable stall_count : natural := 0;
   begin
     stall <= '0';
     
@@ -51,5 +53,7 @@ begin
       stall <= '1';
     end if;
   end process;
+  
+  resvec <= reserve_state;
 end architecture regtracker_arch;
 

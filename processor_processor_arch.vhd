@@ -84,8 +84,10 @@ architecture processor_arch of processor is
   -- ram output
   signal ram_data : std_ulogic_vector(31 downto 0);
   
+  signal resvec : std_ulogic_vector(31 downto 0);
+  
 begin
-  fetch : entity work.instruction_fetch(if_arch)
+  fetch : entity work.instruction_fetch(if_arch_behavioral)
     port map(
       
       -- arbiter <-> fetch interactions  
@@ -257,12 +259,14 @@ begin
     port map(
       fetch_addr => f2arb_fetchaddr, 
       mem_addr => mem2arb_addr, 
-      data_in => (mem2arb_writedata and mem2arb_we) or ((not mem2arb_we) and ram_data),
+      data_in_ram => ram_data,
+      data_in_mem => mem2arb_writedata,
+      data_out_mem => arb2ram_data,
       fetch_read => f2arb_read,
       mem_read => mem2arb_re, 
       write_in => mem2arb_we, 
       delay_in => ram2arb_delay,
-      data_out => arb_data,
+      data_out_ram => arb_data,
       addr_out => arb2ram_addr,
       fetch_delay => arb2f_fetchdelay,
       mem_delay => arb2mem_delay,
@@ -272,7 +276,6 @@ begin
   
   arb2f_instdata <= arb_data;
   arb2mem_readdata <= arb_data;
-  arb2ram_data <= arb_data;
   
   regfile : entity work.regfile(regfile_arch)
     port map(
@@ -307,6 +310,7 @@ begin
       read_a => d2rt_reada,
       read_b => d2rt_readb,
       reserve => d2rt_rfwa,
+      resvec => resvec,
       
       -- clock
       clock => clock,
