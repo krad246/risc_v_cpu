@@ -28,21 +28,22 @@ architecture decode_stage_arch of decode_stage is
     signal cu_opcode : rv32i_op;
     
     -- decoder registration
-    signal r1, r2, rde : std_ulogic_vector(4 downto 0);
-    signal rs1v, rs2v, rdv : std_ulogic;
+    signal rdv : std_ulogic;
 
 begin
     -- combinational decoder 
     format_parse : entity work.decoder(decoder_arch)
         port map(instruction => ir_val,
-            rs1 => r1,
-            rs2 => r2,
-            rd => rde,
-            rs1_used => rs1v,
-            rs2_used => rs2v,
+            rs1 => rs1,
+            rs2 => rs2,
+            rd => rd,
+            rs1_used => rs1_used,
+            rs2_used => rs2_used,
             rd_used => rdv,
             opcode => cu_opcode,
             imm => cu_imm);
+            
+    rd_used <= (rdv and not stall) and (rdv and not jmp);
 
     -- register to latch the instruction
     inst_register : entity work.reg(pos_clk_desc)
@@ -64,25 +65,17 @@ begin
 
     -- control unit that populates the operand fields
     -- control unit listens in on the opcode, program counter, data inputs and immediate
-    control_unit : process(cu_opcode, cu_imm, pc_val, rs1_data, rs2_data, stall, jmp, r1, r2, rde, rs1v, rs2v, rdv)
+    control_unit : process(cu_opcode, cu_imm, pc_val, rs1_data, rs2_data, stall, jmp)
         constant zero : std_ulogic_vector(31 downto 0) := x"00000000";
         variable pc_offset : unsigned(31 downto 0);
 
     begin
-        -- directly set the opcode from the combinational decoder unless a stall has occurred
+        -- directly set the opcode from the combinational decoder unless a stall or a jump has occurred
         if stall or jmp then
           opcode <= nop;
         else
           opcode <= cu_opcode;
         end if;
-        
-        rs1 <= r1;
-        rs2 <= r2;
-        rd <= rde;
-        
-        rs1_used <= rs1v;
-        rs2_used <= rs2v;
-        rd_used <= rdv;
 
         -- populate the operands based on the opcode
         -- generally op2 is always the immediate
@@ -175,14 +168,6 @@ begin
                 op0 <= zero;
                 op1 <= zero;
                 op2 <= zero;
-                
-                rs1 <= zero(4 downto 0);
-                rs2 <= zero(4 downto 0);
-                rd  <= zero(4 downto 0);
-                
-                rs1_used <= '0';
-                rs2_used <= '0';
-                rd_used <= '0';
         end case;
     end process;
 end architecture decode_stage_arch; 
