@@ -130,6 +130,9 @@ begin
       -- stall from register tracker or memory stage
       stall => rt2d_stall or m_stall,
       
+      -- jmp for exec
+      jmp => ex2f_jmp,
+      
       -- rs1 and rs2 contents from register file
       rs1_data => rf2d_rs1_data,
       rs2_data => rf2d_rs2_data,
@@ -310,14 +313,15 @@ begin
       read_a => d2rt_reada,
       read_b => d2rt_readb,
       reserve => d2rt_rfwa,
-      resvec => resvec,
       
       -- clock
       clock => clock,
       
       -- write signal from writeback frees register
       rfwa_wb => wb_rd,
-      free => wb_write
+      free => wb_write,
+      
+      resvec => resvec
     );  
 
 end architecture processor_arch;

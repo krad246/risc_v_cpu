@@ -14,8 +14,8 @@ use ieee.numeric_std.all;
 entity regtracker is
   port(rfra_a, rfra_b, rfwa_decd, rfwa_wb : in std_ulogic_vector(4 downto 0);
     reserve, read_a, read_b, free, clock : in std_ulogic;
-    resvec : out std_ulogic_vector(31 downto 0);
-    stall : out std_ulogic);
+    stall : out std_ulogic;
+    resvec : out std_ulogic_vector(31 downto 0));
 end entity regtracker;
 
 --
