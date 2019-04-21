@@ -52,7 +52,7 @@ begin
         port map(reg_in => instruction,
             reg_clk => clock,
             reg_en => not stall,
-            reg_rst => '0',
+            reg_rst => jmp,
             reg_out => ir_val);
 
     -- register to latch the program counter
