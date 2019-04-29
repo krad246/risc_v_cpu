@@ -13,7 +13,10 @@ use ieee.numeric_std.all;
 use work.rv32i.all;
 
 entity processor is
-  port(clock : in std_ulogic);
+  port(clock, reset, ram_stall_sig : in std_ulogic;
+    data_to_ram, ram_addr : out std_ulogic_vector(31 downto 0);
+    data_from_ram : in std_ulogic_vector(31 downto 0);
+    read_en, write_en : out std_ulogic);
 end entity processor;
 
 --
@@ -51,9 +54,9 @@ architecture processor_arch of processor is
   signal arb2mem_delay : std_ulogic;
   
   -- arbiter <-> ram interaction
-  signal arb2ram_addr, arb2ram_data : std_ulogic_vector(31 downto 0);
-  signal arb2ram_we, arb2ram_re : std_ulogic;
-  signal ram2arb_delay : std_ulogic;
+--  signal arb2ram_addr, arb2ram_data : std_ulogic_vector(31 downto 0);
+--  signal arb2ram_we, arb2ram_re : std_ulogic;
+--  signal ram2arb_delay : std_ulogic;
   
   -- decode outputs
   signal d_rs1, d_rs2, d_rd : std_ulogic_vector(4 downto 0);
@@ -84,8 +87,6 @@ architecture processor_arch of processor is
   -- ram output
   signal ram_data : std_ulogic_vector(31 downto 0);
   
-  signal resvec : std_ulogic_vector(31 downto 0);
-  
 begin
   fetch : entity work.instruction_fetch(if_arch_behavioral)
     port map(
@@ -97,7 +98,7 @@ begin
       if_read_out => f_read,
       
       -- default to start but dont reset
-      if_rst => '0',
+      if_rst => reset,
       
       -- connect clock
       if_clk => clock,
@@ -252,29 +253,35 @@ begin
       clock => clock
     );    
    
-  ram : entity work.MemorySystem(Behavior)
-  port map(Addr => arb2ram_addr, DataIn => arb2ram_data,
-      clock => clock, we => arb2ram_we, re => arb2ram_re,
-      mdelay => ram2arb_delay,
-      DataOut => ram_data);
+--  ram : entity work.MemorySystem(Behavior)
+--  port map(Addr => arb2ram_addr, DataIn => arb2ram_data,
+--      clock => clock, we => arb2ram_we, re => arb2ram_re,
+--      mdelay => ram2arb_delay,
+--      DataOut => ram_data);
   
   arbiter : entity work.arbiter(arbiter_arch)
     port map(
       fetch_addr => f2arb_fetchaddr, 
       mem_addr => mem2arb_addr, 
-      data_in_ram => ram_data,
+      data_in_ram => data_from_ram, 
+        -- ram_data,
       data_in_mem => mem2arb_writedata,
-      data_out_mem => arb2ram_data,
+      data_out_mem => data_to_ram, 
+        -- arb2ram_data,
       fetch_read => f2arb_read,
       mem_read => mem2arb_re, 
       write_in => mem2arb_we, 
-      delay_in => ram2arb_delay,
+      delay_in => ram_stall_sig, 
+        -- ram2arb_delay,
       data_out_ram => arb_data,
-      addr_out => arb2ram_addr,
+      addr_out => ram_addr, 
+        -- arb2ram_addr,
       fetch_delay => arb2f_fetchdelay,
       mem_delay => arb2mem_delay,
-      write_out => arb2ram_we, 
-      read_out => arb2ram_re
+      write_out => write_en, 
+        -- arb2ram_we, 
+      read_out => read_en 
+        -- arb2ram_re
     ); 
   
   arb2f_instdata <= arb_data;
@@ -295,6 +302,7 @@ begin
       
       -- clock
       clock => clock,
+      reset => reset,
       
       -- register contents go to decode
       read_data_1 => rf2d_rs1_data,
@@ -319,9 +327,7 @@ begin
       
       -- write signal from writeback frees register
       rfwa_wb => wb_rd,
-      free => wb_write,
-      
-      resvec => resvec
+      free => wb_write
     );  
 
 end architecture processor_arch;

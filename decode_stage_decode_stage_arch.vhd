@@ -44,7 +44,7 @@ begin
             imm => cu_imm);
             
     -- if a stall or issue are issued, then you can't reserve a register
-    rd_used <= rdv and not (stall or jmp);
+    rd_used <= rdv and not jmp;
 
     -- register to latch the instruction
     inst_register : entity work.reg(pos_clk_desc)

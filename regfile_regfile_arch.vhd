@@ -17,6 +17,7 @@ entity regfile is
     write_addr : in std_ulogic_vector(4 downto 0);
     write : in std_ulogic;
     clock : in std_ulogic;
+    reset : in std_ulogic;
     read_data_1, read_data_2 : out std_logic_vector(31 downto 0));
 end entity regfile;
 
@@ -50,7 +51,7 @@ begin
       port map(reg_in => data_in,
         reg_clk => clock,
         reg_en => w_select(i) and write,
-        reg_rst => '0',
+        reg_rst => reset,
         reg_out => reg_output);
         
     tsbI1 : entity work.tsb(tsb_arch)
